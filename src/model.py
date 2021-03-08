@@ -18,8 +18,10 @@ strategy = tf.distribute.MirroredStrategy()
 print('Number of devices: {}'.format(strategy.num_replicas_in_sync))
 
 # General settings
+# --- changed -- 
 c = Conf_BRCA_TRAITS_miR_17_5p_extreme()
 c.set_local()
+print('model.py: load_wieghts_path',c.LOAD_WEIGHTS_PATH)
 training = True  # set to False for predictions
 resample_round = 0  # can be replaced by sys.argv[..] to automate using external script
 print("Resample round {}".format(resample_round))
@@ -27,7 +29,7 @@ c.APPLY_AUGMENTATIONS = True  # flip augmentations that apply only to train set
 c.NETWORK_NAME = 'inception'
 
 # Training settings
-EPOCHS = 1000  # setting an upper limit. The model will likely stop before, when converging on validation set.
+EPOCHS =  10 # 1000 setting an upper limit. The model will likely stop before, when converging on validation set.
 lr = 0.001
 BATCH_SIZE_PER_REPLICA = c.BATCH_SIZE
 BATCH_SIZE = BATCH_SIZE_PER_REPLICA * strategy.num_replicas_in_sync
@@ -76,11 +78,13 @@ with strategy.scope():
     optimizer = tf.keras.optimizers.Adam(lr=lr)
     lr_metric = get_lr_metric(optimizer)
     model.compile(optimizer=optimizer, loss=loss, metrics=[main_metric,lr_metric,tf.keras.metrics.AUC()])
-    model.summary()
-
+    #     model.summary()
+    print('model, gcs_pattern:', c.GCS_PATTERN)
+    print('model gsc_pattern:',c.GCS_PATTERN_PER_SAMPLE)
     # Train the model
     global_step = 0
     if training:
+        print('model.py: load_wieghts_path',c.LOAD_WEIGHTS_PATH)
         if c.LOAD_WEIGHTS_PATH:
             model.load_weights(tf.train.latest_checkpoint(c.LOAD_WEIGHTS_PATH))
             log.print_and_log("Loaded model from path: {}".format(c.LOAD_WEIGHTS_PATH))
